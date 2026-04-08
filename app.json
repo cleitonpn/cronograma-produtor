@@ -1,5 +1,6 @@
 {
   "expo": {
+    "newArchEnabled": false,
     "name": "Cronograma Produtor",
     "slug": "cronograma-produtor",
     "version": "1.0.0",
