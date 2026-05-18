@@ -20,29 +20,31 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Install Android SDK components
+      - name: Accept Android SDK licenses
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+      - name: Install platform and build tools
         run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
             "platforms;android-34" \
-            "build-tools;34.0.0" 2>/dev/null | grep -v "^[=\-]"
+            "build-tools;34.0.0"
 
       - name: Set up Gradle 8.4
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: "8.4"
 
+      - name: Point Gradle to Android SDK
+        working-directory: car-door-reminder
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+
       - name: Build debug APK
         working-directory: car-door-reminder
-        run: gradle assembleDebug --no-daemon --stacktrace
-
-      - name: Rename APK
-        run: |
-          cp car-door-reminder/app/build/outputs/apk/debug/app-debug.apk \
-             lembrete-porta-v1.0-debug.apk
+        run: gradle assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: lembrete-porta-v1.0
-          path: lembrete-porta-v1.0-debug.apk
+          path: car-door-reminder/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
