@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Lembrete de Porta</string>
+
+    <string name="status_conectado">Android Auto conectado</string>
+    <string name="status_desconectado">Android Auto desconectado</string>
+    <string name="status_verificando">Verificando conexao...</string>
+
+    <string name="instrucao_conectado">Tudo certo! Quando voce desconectar o Android Auto, um alerta sonoro ira lembrar voce de travar as portas do carro.</string>
+    <string name="instrucao_desconectado">O monitoramento esta ativo. Conecte o Android Auto no seu carro e quando desconectar voce recebera um aviso sonoro para travar as portas.</string>
+
+    <string name="btn_ativar">Ativar Lembrete</string>
+    <string name="btn_desativar">Desativar Lembrete</string>
+
+    <string name="desc_icone_status">Icone de status da conexao com o carro</string>
+</resources>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.CarDoorReminder" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/cor_primaria</item>
+        <item name="colorPrimaryVariant">@color/cor_primaria_dark</item>
+        <item name="colorOnPrimary">@color/texto_primario</item>
+        <item name="android:windowBackground">@color/fundo</item>
+        <item name="android:statusBarColor">@color/fundo</item>
+        <item name="android:navigationBarColor">@color/fundo</item>
+    </style>
+</resources>

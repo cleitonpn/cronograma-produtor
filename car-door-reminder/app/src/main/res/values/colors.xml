@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="fundo">#0F1117</color>
+    <color name="fundo_card">#1C1F2E</color>
+    <color name="texto_primario">#FFFFFF</color>
+    <color name="texto_secundario">#9AA0B4</color>
+    <color name="verde_conectado">#4CAF50</color>
+    <color name="cinza_desconectado">#4A4E5C</color>
+    <color name="cor_primaria">#5C7CFA</color>
+    <color name="cor_primaria_dark">#364FC7</color>
+</resources>
