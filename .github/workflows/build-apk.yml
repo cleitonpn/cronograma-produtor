@@ -1,0 +1,48 @@
+name: Build APK - Lembrete de Porta
+
+on:
+  push:
+    branches: [ "claude/car-door-lock-reminder-o6OgT" ]
+    paths: [ "car-door-reminder/**" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install Android SDK components
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "platforms;android-34" \
+            "build-tools;34.0.0" 2>/dev/null | grep -v "^[=\-]"
+
+      - name: Set up Gradle 8.4
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: "8.4"
+
+      - name: Build debug APK
+        working-directory: car-door-reminder
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Rename APK
+        run: |
+          cp car-door-reminder/app/build/outputs/apk/debug/app-debug.apk \
+             lembrete-porta-v1.0-debug.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: lembrete-porta-v1.0
+          path: lembrete-porta-v1.0-debug.apk
+          retention-days: 30
