@@ -17,6 +17,9 @@
     <!-- Vibrar ao alertar -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- Permite pedir exclusão da otimização de bateria (necessário para rodar em segundo plano) -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <!-- Iniciar serviço automaticamente após reinicialização do telefone -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
