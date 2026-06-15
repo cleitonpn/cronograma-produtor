@@ -1,6 +1,7 @@
 package com.cleitonpn.cardoorreminder
 
 import android.Manifest
+import android.bluetooth.BluetoothManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -10,90 +11,131 @@ import android.os.PowerManager
 import android.provider.Settings
 import android.view.View
 import android.widget.Button
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.car.app.connection.CarConnection
 import androidx.core.content.ContextCompat
+import androidx.preference.PreferenceManager
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var ivStatus: ImageView
+    private lateinit var tvCarroSelecionado: TextView
+    private lateinit var btnSelecionarCarro: Button
     private lateinit var tvStatus: TextView
-    private lateinit var tvInstrucao: TextView
     private lateinit var tvAvisoBateria: TextView
-    private lateinit var btnToggle: Button
+    private lateinit var tvAvisoPermissao: TextView
 
-    private var servicoAtivo = false
+    private val pedirPermissaoBluetooth = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { concedida ->
+        if (concedida) abrirSeletorDispositivos()
+        else tvAvisoPermissao.visibility = View.VISIBLE
+    }
 
     private val pedirPermissaoNotificacao = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { concedida ->
-        if (concedida) {
-            iniciarServico()
-            pedirExclusaoBateriaComDialogo()
-        }
-    }
+    ) { _ -> /* a notificação é o ponto central — segue mesmo se negar */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        ivStatus = findViewById(R.id.ivStatus)
+        tvCarroSelecionado = findViewById(R.id.tvCarroSelecionado)
+        btnSelecionarCarro = findViewById(R.id.btnSelecionarCarro)
         tvStatus = findViewById(R.id.tvStatus)
-        tvInstrucao = findViewById(R.id.tvInstrucao)
         tvAvisoBateria = findViewById(R.id.tvAvisoBateria)
-        btnToggle = findViewById(R.id.btnToggle)
+        tvAvisoPermissao = findViewById(R.id.tvAvisoPermissao)
 
-        CarConnection(this).type.observe(this) { tipo ->
-            atualizarStatusConexao(tipo)
-        }
+        btnSelecionarCarro.setOnClickListener { verificarPermissaoEAbrirSeletor() }
+        tvAvisoBateria.setOnClickListener { abrirConfiguracaoBateria() }
 
-        btnToggle.setOnClickListener {
-            if (servicoAtivo) pararServico() else verificarPermissaoEIniciar()
-        }
-
-        tvAvisoBateria.setOnClickListener {
-            pedirExclusaoBateriaComDialogo()
-        }
-
-        verificarPermissaoEIniciar()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        // Atualiza o aviso toda vez que o usuário volta ao app (ex: após configurar bateria)
-        atualizarAvisoBateria()
-    }
-
-    private fun verificarPermissaoEIniciar() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
             != PackageManager.PERMISSION_GRANTED
         ) {
             pedirPermissaoNotificacao.launch(Manifest.permission.POST_NOTIFICATIONS)
-        } else {
-            iniciarServico()
-            pedirExclusaoBateriaComDialogo()
         }
     }
 
-    private fun pedirExclusaoBateriaComDialogo() {
+    override fun onResume() {
+        super.onResume()
+        atualizarUi()
+    }
+
+    private fun atualizarUi() {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val nomeCarro = prefs.getString(BluetoothReceiver.KEY_CAR_NAME, null)
+
+        if (nomeCarro != null) {
+            tvCarroSelecionado.text = "Carro: $nomeCarro"
+            tvStatus.text = "Monitoramento ativo — você será avisado quando o Bluetooth do carro desconectar."
+        } else {
+            tvCarroSelecionado.text = "Nenhum carro selecionado"
+            tvStatus.text = "Selecione o dispositivo Bluetooth do seu carro para ativar o monitoramento."
+        }
+
+        val temPermissaoBt = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+        tvAvisoPermissao.visibility = if (temPermissaoBt) View.GONE else View.VISIBLE
+
+        val pm = getSystemService(PowerManager::class.java)
+        tvAvisoBateria.visibility = if (pm.isIgnoringBatteryOptimizations(packageName)) View.GONE else View.VISIBLE
+    }
+
+    private fun verificarPermissaoEAbrirSeletor() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            pedirPermissaoBluetooth.launch(Manifest.permission.BLUETOOTH_CONNECT)
+        } else {
+            abrirSeletorDispositivos()
+        }
+    }
+
+    private fun abrirSeletorDispositivos() {
+        val bluetoothManager = getSystemService(BluetoothManager::class.java)
+        val dispositivos = bluetoothManager.adapter?.bondedDevices?.toList() ?: emptyList()
+
+        if (dispositivos.isEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle("Nenhum dispositivo pareado")
+                .setMessage("Pareie o Bluetooth do seu carro com o celular primeiro, depois volte aqui para selecioná-lo.")
+                .setPositiveButton("Ok", null)
+                .show()
+            return
+        }
+
+        val nomes = dispositivos.map { it.name ?: it.address }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Selecione o Bluetooth do carro")
+            .setItems(nomes) { _, index ->
+                val dispositivo = dispositivos[index]
+                PreferenceManager.getDefaultSharedPreferences(this).edit()
+                    .putString(BluetoothReceiver.KEY_CAR_ADDRESS, dispositivo.address)
+                    .putString(BluetoothReceiver.KEY_CAR_NAME, dispositivo.name ?: dispositivo.address)
+                    .apply()
+
+                // Pede exclusão de bateria logo após selecionar o carro
+                pedirExclusaoBateriaSeNecessario()
+                atualizarUi()
+            }
+            .show()
+    }
+
+    private fun pedirExclusaoBateriaSeNecessario() {
         val pm = getSystemService(PowerManager::class.java)
         if (pm.isIgnoringBatteryOptimizations(packageName)) return
 
         AlertDialog.Builder(this)
-            .setTitle("Rodar em segundo plano")
+            .setTitle("Última etapa: segundo plano")
             .setMessage(
-                "Para alertar você mesmo com o app fechado, precisamos desativar a " +
-                "otimização de bateria para este app.\n\n" +
-                "Na próxima tela, selecione \"Sem restrições\" ou \"Não otimizar\"."
+                "Para alertar você mesmo com o app fechado, desative a otimização de bateria para este app.\n\n" +
+                "Na próxima tela selecione \"Sem restrições\" ou \"Não otimizar\"."
             )
-            .setPositiveButton("Configurar agora") { _, _ ->
-                abrirConfiguracaoBateria()
-            }
+            .setPositiveButton("Configurar agora") { _, _ -> abrirConfiguracaoBateria() }
             .setNegativeButton("Depois", null)
             .show()
     }
@@ -106,48 +148,7 @@ class MainActivity : AppCompatActivity() {
                 }
             )
         } catch (e: Exception) {
-            // Alguns fabricantes bloqueiam essa intent — abre a tela geral
             startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
         }
-    }
-
-    private fun atualizarAvisoBateria() {
-        val pm = getSystemService(PowerManager::class.java)
-        tvAvisoBateria.visibility = if (pm.isIgnoringBatteryOptimizations(packageName)) {
-            View.GONE
-        } else {
-            View.VISIBLE
-        }
-    }
-
-    private fun iniciarServico() {
-        startForegroundService(Intent(this, CarMonitorService::class.java))
-        servicoAtivo = true
-        atualizarBotao()
-    }
-
-    private fun pararServico() {
-        stopService(Intent(this, CarMonitorService::class.java))
-        servicoAtivo = false
-        atualizarBotao()
-    }
-
-    private fun atualizarStatusConexao(tipo: Int) {
-        when (tipo) {
-            CarConnection.CONNECTION_TYPE_PROJECTION -> {
-                ivStatus.setColorFilter(ContextCompat.getColor(this, R.color.verde_conectado))
-                tvStatus.text = getString(R.string.status_conectado)
-                tvInstrucao.text = getString(R.string.instrucao_conectado)
-            }
-            else -> {
-                ivStatus.setColorFilter(ContextCompat.getColor(this, R.color.cinza_desconectado))
-                tvStatus.text = getString(R.string.status_desconectado)
-                tvInstrucao.text = getString(R.string.instrucao_desconectado)
-            }
-        }
-    }
-
-    private fun atualizarBotao() {
-        btnToggle.text = if (servicoAtivo) getString(R.string.btn_desativar) else getString(R.string.btn_ativar)
     }
 }

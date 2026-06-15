@@ -11,8 +11,8 @@ android {
         applicationId = "com.cleitonpn.cardoorreminder"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "2.0"
     }
 
     buildTypes {
@@ -39,12 +39,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
-    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
-    // CarConnection API — detecta conexão/desconexão do Android Auto
-    implementation("androidx.car.app:app:1.4.0")
-
-    // LifecycleService — permite observar LiveData dentro de um Service
-    implementation("androidx.lifecycle:lifecycle-service:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+    // SharedPreferences moderno (PreferenceManager)
+    implementation("androidx.preference:preference-ktx:1.2.1")
 }

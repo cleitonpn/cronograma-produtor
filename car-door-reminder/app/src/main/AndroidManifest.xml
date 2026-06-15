@@ -1,27 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Necessário para rodar serviço em segundo plano (Android 9+) -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-
-    <!-- Tipo de serviço: dataSync nao exige conexao ativa para iniciar (Android 14+) -->
+    <!-- Bluetooth: API <= 30 usa permissão legada, API 31+ usa BLUETOOTH_CONNECT -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission
-        android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"
-        android:minSdkVersion="34" />
+        android:name="android.permission.BLUETOOTH_CONNECT"
+        android:minSdkVersion="31" />
+
+    <!-- Vibrar ao alertar -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <!-- Mostrar notificações (Android 13+) -->
     <uses-permission
         android:name="android.permission.POST_NOTIFICATIONS"
         android:minSdkVersion="33" />
 
-    <!-- Vibrar ao alertar -->
-    <uses-permission android:name="android.permission.VIBRATE" />
-
-    <!-- Permite pedir exclusão da otimização de bateria (necessário para rodar em segundo plano) -->
+    <!-- Permite pedir exclusão da otimização de bateria -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-
-    <!-- Iniciar serviço automaticamente após reinicialização do telefone -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="true"
@@ -41,18 +36,25 @@
             </intent-filter>
         </activity>
 
-        <service
-            android:name=".CarMonitorService"
-            android:foregroundServiceType="dataSync"
-            android:exported="false" />
-
+        <!--
+            BluetoothReceiver: acorda o app automaticamente quando o Bluetooth
+            do carro desconecta — funciona mesmo com o app completamente fechado.
+            ACTION_ACL_DISCONNECTED está na lista de broadcasts isentos do
+            Android 8+ e é entregue mesmo sem o app em memória.
+        -->
         <receiver
-            android:name=".BootReceiver"
-            android:exported="false">
+            android:name=".BluetoothReceiver"
+            android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.bluetooth.device.action.ACL_DISCONNECTED" />
+                <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
             </intent-filter>
         </receiver>
+
+        <!-- Receptor do segundo lembrete (30s após a desconexão) -->
+        <receiver
+            android:name=".SecondReminderReceiver"
+            android:exported="false" />
 
     </application>
 
